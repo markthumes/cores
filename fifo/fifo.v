@@ -17,8 +17,8 @@ module fifo #(
 	wire [ADDRSIZE-1:0] raddr;
 	wire [ADDRSIZE:0] wptr;
 	wire [ADDRSIZE:0] rptr;
-	wire [ADDRSIZE:0] wq2_rptr;
-	wire [ADDRSIZE:0] rq2_wptr;
+	reg [ADDRSIZE:0] wq2_rptr = 0;
+	reg [ADDRSIZE:0] rq2_wptr = 0;
 
 	dpram #(DATASIZE, ADDRSIZE) dpram (
 		.rdata(rdata),
@@ -31,6 +31,7 @@ module fifo #(
 	);
 
 	//Synchronization read pointer into the write clock domain
+	reg [ADDRSIZE:0] wq1_rptr;
 	always @(posedge wclk or negedge wrst_n) begin
 		if( !wrst_n ) begin
 			wq2_rptr <= 0;
@@ -42,6 +43,7 @@ module fifo #(
 	end
 
 	//Synchronize write pointer into the read clock domain
+	reg [ADDRSIZE:0] rq1_wptr;
 	always @(posedge rclk or negedge rrst_n) begin
 		if( !rrst_n ) begin
 			rq2_wptr <= 0;
@@ -61,7 +63,7 @@ module fifo #(
 		.rclk(rclk),
 		.rrst_n(rrst_n)
 	);
-	wptr_full #(ADDRSIZE) wptr_empty(
+	wptr_full #(ADDRSIZE) wptr_full(
 		.wfull(wfull),
 		.waddr(waddr),
 		.wptr(wptr),
@@ -92,9 +94,9 @@ module dpram #(
 	localparam DEPTH = 1<<ADDRSIZE;
 	reg [DATASIZE-1:0] storage [0:DEPTH-1];
 
-	assign rdata = mem[raddr];
+	assign rdata = storage[raddr];
 	always @(posedge wclk)
-		if( wclken && !wfull ) mem[waddr] <= wdata;
+		if( wclken && !wfull ) storage[waddr] <= wdata;
 `endif
 endmodule
 
@@ -137,6 +139,7 @@ module rptr_empty #(
 endmodule
 
 module wptr_full #(
+	parameter ADDRSIZE = 4
 )(
 	output reg                 wfull,
 	output wire [ADDRSIZE-1:0] waddr,
@@ -166,10 +169,11 @@ module wptr_full #(
 	assign wgraynext = (wbinnext>>1) ^ wbinnext;
 
 	assign wfull_val = (
-		( wgnext[ADDRSIZE-0]   != wq2_rptr[ADDRSIZE-0]   ) &&
-		( wgnext[ADDRSIZE-1]   != wq2_rptr[ADDRSIZE-1]   ) &&
-		( wgnext[ADDRSIZE-2:0] == wq2_rptr[ADDRSIZE-2:0] )
+		( wgraynext[ADDRSIZE-0]   != wq2_rptr[ADDRSIZE-0]   ) &&
+		( wgraynext[ADDRSIZE-1]   != wq2_rptr[ADDRSIZE-1]   ) &&
+		( wgraynext[ADDRSIZE-2:0] == wq2_rptr[ADDRSIZE-2:0] )
 	);
+
 
 	always @(posedge wclk or negedge wrst_n) begin
 		if( !wrst_n ) wfull <= 1'b0;
