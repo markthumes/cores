@@ -31,7 +31,7 @@ module fifo #(
 	);
 
 	//Synchronization read pointer into the write clock domain
-	reg [ADDRSIZE:0] wq1_rptr;
+	reg [ADDRSIZE:0] wq1_rptr = 0;
 	always @(posedge wclk or negedge wrst_n) begin
 		if( !wrst_n ) begin
 			wq2_rptr <= 0;
@@ -43,7 +43,7 @@ module fifo #(
 	end
 
 	//Synchronize write pointer into the read clock domain
-	reg [ADDRSIZE:0] rq1_wptr;
+	reg [ADDRSIZE:0] rq1_wptr = 0;
 	always @(posedge rclk or negedge rrst_n) begin
 		if( !rrst_n ) begin
 			rq2_wptr <= 0;
@@ -111,9 +111,13 @@ module rptr_empty #(
 	input  wire              rclk,
 	input  wire              rrst_n
 );
-	reg  [ADDRSIZE:0] rbin;
+	initial begin
+		rptr = 0;
+		rempty = 1;
+	end
+	reg  [ADDRSIZE:0] rbin = 0;
 	wire [ADDRSIZE:0] rgraynext;
-	wire [ADDRSIZE:0] rbinext;
+	wire [ADDRSIZE:0] rbinnext;
 
 	always @(posedge rclk or negedge rrst_n) begin
 		if(!rrst_n) begin
@@ -149,7 +153,11 @@ module wptr_full #(
 	input  wire                wclk,
 	input  wire                wrst_n
 );
-	reg [ADDRSIZE:0] wbin;
+	initial begin
+		wfull = 0;
+		wptr  = 0;
+	end
+	reg [ADDRSIZE:0] wbin = 0;
 	wire [ADDRSIZE:0] wgraynext;
 	wire [ADDRSIZE:0] wbinnext;
 
